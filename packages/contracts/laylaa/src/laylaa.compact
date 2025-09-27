@@ -1,0 +1,150 @@
+/**
+ * @file LAYLAA NFT Burn-to-Mint Implementation in Compact
+ * @description Burns LAYLAA tokens on XRPL testnet to mint NFTs on Midnight
+ * @license MIT
+ *
+ * This contract implements a burn-to-mint system where users burn LAYLAA tokens
+ * on XRPL testnet and receive corresponding NFTs on the Midnight network.
+ * Each burn selects one of 25 unique LAYLAA media files (images/videos/GIFs).
+ */
+
+pragma language_version >= 0.16.0;
+
+import CompactStandardLibrary;
+import "midnight-contracts/contracts/tokens/nft/src/modules/Nft";
+
+// Export selected circuits from the NFT module for standard NFT operations
+export {
+  balanceOf,
+  ownerOf,
+  approve,
+  getApproved,
+  setApprovalForAll,
+  isApprovedForAll
+};
+
+// =====================
+// LAYLAA-specific data structures
+// =====================
+
+// Struct holding all attributes for a LAYLAA NFT
+export struct LaylaaNFT {
+  mediaId: Uint<32>,             // ID of the media file (1-25)
+  xrplTxHash: Bytes<64>,         // XRPL burn transaction hash
+  burnAmount: Uint<64>,          // Amount of LAYLAA tokens burned
+  owner: ZswapCoinPublicKey,     // Owner's public key
+  mintedAt: Uint<64>             // Timestamp when NFT was minted
+}
+
+// Mapping from NFT ID to LAYLAA NFT data
+export ledger laylaaNFTs: Map<Uint<64>, LaylaaNFT>;
+
+// Counter to track the total number of LAYLAA NFTs created
+export ledger allLaylaaNFTsCount: Counter;
+
+// Mapping to prevent double-minting from same XRPL transaction
+export ledger processedBurns: Map<Bytes<64>, Boolean>;
+
+// Witness function to get current timestamp
+witness getCurrentTimestamp(): Uint<64>;
+
+// Witness function to verify XRPL burn transaction
+witness verifyXRPLBurn(txHash: Bytes<64>, amount: Uint<64>): Boolean;
+
+// =====================
+// Contract Initialization
+// =====================
+
+// Contract constructor: initializes the NFT counter
+constructor() {
+  allLaylaaNFTsCount.increment(0);
+}
+
+// =====================
+// Media Selection Logic
+// =====================
+
+// Generates media ID (1-25) based on XRPL transaction hash
+// References: assets/laylaa-nft-collection/images/laylaa-001.jpg through laylaa-025.jpg
+circuit generateMediaId(xrplTxHash: Bytes<64>): Uint<32> {
+  // Use transaction hash to deterministically select from 25 LAYLAA media files
+  // Files located in: assets/laylaa-nft-collection/images/
+  // Supported formats: jpg, jpeg, png, gif, mp4, mov, webm
+  // Simplified media selection for demo - always return media ID 1
+  // In production, this would use proper hash-based selection
+  return 1;
+}
+
+// =====================
+// Main Burn-to-Mint Logic
+// =====================
+
+// Main circuit to verify XRPL burn and mint LAYLAA NFT
+export circuit burnToMintLaylaaNFT(
+  xrplTxHash: Bytes<64>,
+  burnAmount: Uint<64>,
+  recipient: ZswapCoinPublicKey
+): Uint<64> {
+  // Check if this burn has already been processed
+  const alreadyProcessed = processedBurns.member(disclose(xrplTxHash));
+  assert(!alreadyProcessed, "Burn transaction already processed");
+  
+  // Verify the XRPL burn transaction (using witness)
+  const burnVerified = verifyXRPLBurn(xrplTxHash, burnAmount);
+  assert(burnVerified, "XRPL burn verification failed");
+  
+  // Generate media ID based on transaction hash
+  const mediaId = generateMediaId(xrplTxHash);
+  
+  // Get current timestamp
+  const timestamp = getCurrentTimestamp();
+  
+  // Get next NFT ID and increment counter
+  const nftId = (allLaylaaNFTsCount.read() + 1) as Uint<64>;
+  allLaylaaNFTsCount.increment(1);
+  
+  // Create the LAYLAA NFT
+  const laylaaNFT = LaylaaNFT {
+    mediaId: mediaId,
+    xrplTxHash: xrplTxHash,
+    burnAmount: burnAmount,
+    owner: recipient,
+    mintedAt: timestamp
+  };
+  
+  // Store the NFT data
+  laylaaNFTs.insert(disclose(nftId), disclose(laylaaNFT));
+  
+  // Mark this burn as processed
+  processedBurns.insert(disclose(xrplTxHash), disclose(true));
+  
+  // Mint the actual NFT token to the recipient
+  mint(recipient, nftId);
+  
+  return nftId;
+}
+
+// =====================
+// Query Functions
+// =====================
+
+// Get LAYLAA NFT data by token ID
+export circuit getLaylaaNFT(tokenId: Uint<64>): LaylaaNFT {
+  return laylaaNFTs.lookup(disclose(tokenId));
+}
+
+// Get media ID for a specific NFT
+export circuit getMediaId(tokenId: Uint<64>): Uint<32> {
+  const nft = laylaaNFTs.lookup(disclose(tokenId));
+  return nft.mediaId;
+}
+
+// Check if an XRPL transaction has been processed
+export circuit isBurnProcessed(xrplTxHash: Bytes<64>): Boolean {
+  return processedBurns.member(disclose(xrplTxHash));
+}
+
+// Get total number of LAYLAA NFTs minted
+export circuit getTotalLaylaaNFTs(): Uint<64> {
+  return allLaylaaNFTsCount;
+}
