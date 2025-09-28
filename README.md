@@ -95,7 +95,56 @@ Each XRPL burn transaction hash deterministically selects one of 25 media files,
 
 ## 🛠️ **Development Setup**
 
-### **Build Commands**
+### **Prerequisites**
+```bash
+# Install Node.js (v18+ recommended)
+# Download from: https://nodejs.org/
+
+# Install Yarn package manager
+npm install -g yarn
+
+# Verify installation
+node --version
+yarn --version
+```
+
+### **Project Setup**
+```bash
+# Install dependencies
+yarn install
+
+# Generate XRPL testnet wallets and fund them
+yarn setup
+
+# Set up issuer account and issue LAYLAA tokens
+yarn issue
+
+# Check token balances
+yarn balance
+
+# Burn LAYLAA tokens (captures tx hash for Midnight)
+yarn burn --amount 100
+```
+
+### **LAYLAA IOU Token Commands**
+```bash
+# Setup wallets (generates .env file)
+yarn setup
+
+# Issue LAYLAA tokens to holder
+yarn issue
+
+# Check LAYLAA balances
+yarn balance
+
+# Burn tokens for Midnight NFT (default: 100 LAYLAA)
+yarn burn
+
+# Burn specific amount
+yarn burn --amount 250
+```
+
+### **Midnight Contract Build Commands**
 ```bash
 # Compile Compact smart contracts to ZKP circuits
 yarn compact
@@ -105,6 +154,45 @@ yarn build
 
 # Build contracts only
 yarn build:contracts
+```
+
+---
+
+## 💰 **LAYLAA IOU Token Architecture**
+
+### **Token Specifications**
+- **Currency Code**: `LAYLAA`
+- **Type**: XRPL Issued Currency (IOU)
+- **Decimals**: 6 decimal places
+- **Network**: XRPL Testnet
+- **Purpose**: Burn-to-mint mechanism for Midnight NFTs
+
+### **Token Flow**
+1. **Issuer Setup**: Configure issuer account with DefaultRipple flag
+2. **Trust Line Creation**: Holder creates trust line to issuer for LAYLAA
+3. **Token Issuance**: Issuer sends LAYLAA tokens to holder via Payment
+4. **Token Burning**: Holder sends LAYLAA back to issuer (burns tokens)
+5. **Proof Generation**: Burn transaction hash captured for Midnight ZKP
+6. **NFT Minting**: Midnight contract verifies burn and mints NFT
+
+### **Key Files**
+- `src/xrpl/laylaa-iou.js` - Core IOU token management class
+- `src/xrpl/setup-wallets.js` - Generate and fund testnet wallets
+- `src/xrpl/issue-laylaa.js` - Issue LAYLAA tokens to holders
+- `src/xrpl/burn-laylaa.js` - Burn tokens and generate ZKP proof
+- `src/xrpl/check-balance.js` - Check LAYLAA token balances
+
+### **Burn Proof Structure**
+```javascript
+{
+  xrplTxHash: "ABC123...",     // Transaction hash for ZKP input
+  burnAmount: 100,             // Amount burned (Uint<64>)
+  burnerAddress: "rXXX...",    // XRPL account that burned tokens
+  mediaId: 15,                 // Deterministic media selection (1-25)
+  proofHash: "DEF456...",      // Cryptographic proof hash
+  ledgerIndex: 12345,          // XRPL ledger index
+  timestamp: 1698765432        // Unix timestamp
+}
 ```
 
 ---

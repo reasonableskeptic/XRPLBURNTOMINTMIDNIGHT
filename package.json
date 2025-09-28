@@ -3,10 +3,27 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "node src/xrpl/setup-wallets.js",
+    "issue": "node src/xrpl/issue-laylaa.js",
+    "burn": "node src/xrpl/burn-laylaa.js",
+    "balance": "node src/xrpl/check-balance.js",
+    "issue-all": "node src/xrpl/issue-all-laylaa.js",
+    "balance-all": "node src/xrpl/check-all-balances.js",
+    "burn-multi": "node src/xrpl/burn-multi-laylaa.js",
+    "compact": "yarn workspace @midnight-ntwrk/laylaa-contracts compact",
+    "build": "yarn build:contracts",
+    "build:contracts": "yarn workspace @midnight-ntwrk/laylaa-contracts build"
   },
-  "keywords": [],
-  "author": "",
+  "dependencies": {
+    "xrpl": "^3.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "keywords": ["xrpl", "midnight", "zkp", "burn-to-mint", "iou"],
+  "author": "Stephanie Mellott",
   "license": "ISC",
-  "description": ""
+  "description": "LAYLAA IOU token on XRPL Testnet for burn-to-mint NFT system with Midnight blockchain"
 }
